@@ -55,6 +55,7 @@
             position: relative;
         }
 
+        /* จัดการขนาดวิดีโอและ Canvas ในจอหลักให้เต็มพอดีช่อง ไม่แยก 2 ฝั่ง */
         .primary-display video,
         .primary-display canvas {
             position: absolute;
@@ -198,14 +199,14 @@
             <!-- ส่วนจอใหญ่ (Primary) -->
             <div class="primary-display" id="primaryDisplay">
                 <button class="toggle-layout-btn" onclick="toggleLayout()">สลับมุมมอง</button>
-                <video id="mainVideo" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" loop muted playsinline autoplay></video>
+                <video id="mainVideo" src="Video Knee.mp4" loop muted playsinline autoplay></video>
                 <video id="userCameraPrimary" autoplay playsinline style="display: none;"></video>
                 <canvas id="outputCanvasPrimary" style="display: none;"></canvas>
             </div>
 
             <!-- ส่วนจอล่างขวา (PiP) -->
             <div class="pip-wrapper" onclick="toggleLayout()" title="คลิกเพื่อสลับหน้าจอ">
-                <video id="mainVideoPip" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" loop muted playsinline autoplay style="display: none;"></video>
+                <video id="mainVideoPip" src="Video Knee.mp4" loop muted playsinline autoplay style="display: none;"></video>
                 <video id="userCameraPip" autoplay playsinline></video>
                 <canvas id="outputCanvasPip" style="display: none;"></canvas>
             </div>
@@ -336,9 +337,9 @@
             if (reps >= 10) {
                 reps = 0;
                 sets++;
-                setsText.innerText = `เซต: ${sets}/2`;
+                setsText.innerText = `เซต: ${sets}/2`; // เปลี่ยนเป้าหมายเป็น 10 เซต
                 
-                if (sets >= 2) {
+                if (sets >= 2) { // เปลี่ยนตรงนี้จาก 10 เป็น 2
                     speak('ยอดเยี่ยมมากค่ะ ครบทุกเซตแล้วค่ะ', true);
                     feedbackText.innerText = 'ออกกำลังกายครบตามเป้าหมายแล้ว!';
                     isResting = true; 
@@ -468,7 +469,7 @@
                 startBtn.style.display = 'none';
                 mainVideo.play();
                 mainVideoPip.play();
-            } was catch (err) {
+            } catch (err) {
                 alert('ไม่สามารถเปิดใช้งานกล้องได้: ' + err);
             }
         });
