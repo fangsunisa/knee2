@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rehab Exercise - Knee Extension</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Sarabun', sans-serif;
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .mobile-frame {
+            position: relative;
+            width: 390px;
+            height: 844px;
+            background-color: #E0F7FA;
+            border: 12px solid #222;
+            border-radius: 40px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .primary-display {
+            width: 100%;
+            height: 50%;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* จัดการขนาดวิดีโอและ Canvas ในจอหลักให้เต็มพอดีช่อง ไม่แยก 2 ฝั่ง */
+        .primary-display video,
+        .primary-display canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .primary-display #mainVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .pip-wrapper {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 100px;
+            height: 135px;
+            border: 2px solid #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: black;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            z-index: 5;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pip-wrapper:hover {
+            transform: scale(1.05);
+        }
+
+        .pip-wrapper video,
+        .pip-wrapper canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .toggle-layout-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: 1px solid white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .ui-container {
+            flex: 1;
+            padding: 15px 20px 25px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            align-items: center;
+            background-color: #E0F7FA;
+        }
+
+        .alert-box {
+            width: 100%;
+            background-color: #F44336;
+            color: white;
+            padding: 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 25px;
+            box-shadow: 0 4px 6px rgba(244, 67, 54, 0.2);
+            display: none;
+        }
+
+        .feedback-box {
+            width: 100%;
+            background-color: #FFEB3B;
+            color: #333;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 25px;
+            box-shadow: 0 4px 6px rgba(255, 235, 59, 0.3);
+        }
+
+        .stats-box {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background-color: white;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .stats-text {
+            font-size: 25px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        #startBtn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 14px 28px;
+            font-size: 25px;
+            font-weight: bold;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 6px 15px rgba(33, 150, 243, 0.4);
+            transition: 0.2s;
+        }
+        #startBtn:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-frame">
+        <button id="startBtn">เริ่มใช้งาน</button>
+        <div class="container" id="mainApp" style="opacity: 0.3;">
+
+            <!-- ส่วนจอใหญ่ (Primary) -->
+            <div class="primary-display" id="primaryDisplay">
+                <button class="toggle-layout-btn" onclick="toggleLayout()">สลับมุมมอง</button>
+                <video id="mainVideo" src="Video Knee.mp4" loop muted playsinline autoplay></video>
+                <video id="userCameraPrimary" autoplay playsinline style="display: none;"></video>
+                <canvas id="outputCanvasPrimary" style="display: none;"></canvas>
+            </div>
+
+            <!-- ส่วนจอล่างขวา (PiP) -->
+            <div class="pip-wrapper" onclick="toggleLayout()" title="คลิกเพื่อสลับหน้าจอ">
+                <video id="mainVideoPip" src="Video Knee.mp4" loop muted playsinline autoplay style="display: none;"></video>
+                <video id="userCameraPip" autoplay playsinline></video>
+                <canvas id="outputCanvasPip" style="display: none;"></canvas>
+            </div>
+
+            <!-- ส่วน UI ข้อมูล -->
+            <div class="ui-container">
+                <div id="alertBox" class="alert-box">แจ้งเตือน: กรุณาเหยียดขาให้ตรง</div>
+                
+                <div class="feedback-box">
+                    <div id="feedbackText">เตรียมพร้อม... เริ่มจากขาซ้ายค่ะ</div>
+                    <div id="timerText" style="margin-top: 4px; font-size: 15px; color: #d32f2f;"></div>
+                </div>
+
+                <div class="stats-box">
+                    <div class="stats-text" id="repsText">จำนวน: 0/10</div>
+                    <div class="stats-text" id="setsText">เซต: 0/2</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const alertBox = document.getElementById('alertBox');
+        const feedbackText = document.getElementById('feedbackText');
+        const timerText = document.getElementById('timerText');
+        const repsText = document.getElementById('repsText');
+        const setsText = document.getElementById('setsText');
+        const startBtn = document.getElementById('startBtn');
+        const mainApp = document.getElementById('mainApp');
+
+        const mainVideo = document.getElementById('mainVideo');
+        const userCameraPrimary = document.getElementById('userCameraPrimary');
+        const canvasPrimary = document.getElementById('outputCanvasPrimary');
+
+        const mainVideoPip = document.getElementById('mainVideoPip');
+        const userCameraPip = document.getElementById('userCameraPip');
+        const canvasPip = document.getElementById('outputCanvasPip');
+
+        let isCameraMain = false;
+        let streamGlobal = null;
+
+        function toggleLayout() {
+            isCameraMain = !isCameraMain;
+            updateLayoutView();
+        }
+
+        function updateLayoutView() {
+            if (isCameraMain) {
+                mainVideo.style.display = 'none';
+                userCameraPrimary.style.display = 'block';
+                canvasPrimary.style.display = 'block';
+
+                mainVideoPip.style.display = 'block';
+                userCameraPip.style.display = 'none';
+                canvasPip.style.display = 'none';
+
+                mainVideoPip.play();
+            } else {
+                mainVideo.style.display = 'block';
+                userCameraPrimary.style.display = 'none';
+                canvasPrimary.style.display = 'none';
+
+                mainVideoPip.style.display = 'none';
+                userCameraPip.style.display = 'block';
+                canvasPip.style.display = 'block';
+
+                mainVideo.play();
+            }
+        }
+
+        let currentLeg = 'LEFT';
+        let reps = 0;
+        let sets = 0;
+        let isHolding = false;
+        let holdStartTime = null;
+        let lastAlertTime = 0;
+        let lastSpokenSecond = 0;
+        let isResting = false; 
+
+        function calculateAngle(a, b, c) {
+            const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+            let angle = Math.abs(radians * 180.0 / Math.PI);
+            if (angle > 180.0) angle = 360 - angle;
+            return angle;
+        }
+
+        function speak(text, force = false) {
+            if ('speechSynthesis' in window) {
+                if (force) window.speechSynthesis.cancel();
+                if (!window.speechSynthesis.speaking || force) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'th-TH';
+                    const voices = window.speechSynthesis.getVoices();
+                    const thaiVoice = voices.find(v => v.lang.includes('th') && (v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Wanpen') || v.name.includes('Kanya'))) || voices.find(v => v.lang.includes('th'));
+                    if (thaiVoice) utterance.voice = thaiVoice;
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        }
+
+        function triggerError(msg) {
+            alertBox.style.display = 'block';
+            alertBox.innerText = `แจ้งเตือน: ${msg}`;
+            const now = Date.now();
+            if (now - lastAlertTime > 4000) {
+                speak(msg, true);
+                lastAlertTime = now;
+            }
+        }
+
+        function clearError() {
+            alertBox.style.display = 'none';
+        }
+
+        function handleRepCompleted() {
+            isHolding = false;
+            holdStartTime = null;
+            lastSpokenSecond = 0;
+            timerText.innerText = '';
+            clearError();
+
+            reps++;
+            if (reps >= 10) {
+                reps = 0;
+                sets++;
+                setsText.innerText = `เซต: ${sets}/2`; // เปลี่ยนเป้าหมายเป็น 10 เซต
+                
+                if (sets >= 2) { // เปลี่ยนตรงนี้จาก 10 เป็น 2
+                    speak('ยอดเยี่ยมมากค่ะ ครบทุกเซตแล้วค่ะ', true);
+                    feedbackText.innerText = 'ออกกำลังกายครบตามเป้าหมายแล้ว!';
+                    isResting = true; 
+                } else {
+                    speak('เยี่ยมมาก จบหนึ่งเซตแล้วค่ะ พักผ่อนสักครู่', true);
+                    feedbackText.innerText = 'พักผ่อนสักครู่ กำลังเริ่มเซตที่ 2...';
+                    isResting = true; 
+                    
+                    setTimeout(() => {
+                        isResting = false;
+                        currentLeg = 'LEFT';
+                        repsText.innerText = `จำนวน: ${reps}/10`;
+                        speak('เริ่มเซตถัดไป เริ่มจากขาซ้ายค่ะ', true);
+                        feedbackText.innerText = 'เริ่มเซตใหม่: เริ่มจากขาซ้าย';
+                    }, 5000);
+                }
+            } else {
+                repsText.innerText = `จำนวน: ${reps}/10`;
+                currentLeg = currentLeg === 'LEFT' ? 'RIGHT' : 'LEFT';
+                const legName = currentLeg === 'LEFT' ? 'ซ้าย' : 'ขวา';
+                const msg = `เยี่ยมมาก สลับไปทำขา${legName}ค่ะ`;
+                
+                feedbackText.innerText = msg;
+                speak(msg, true);
+            }
+        }
+
+        const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        pose.onResults((results) => {
+            [ {canvas: canvasPrimary}, {canvas: canvasPip} ].forEach(item => {
+                item.canvas.width = results.image.width;
+                item.canvas.height = results.image.height;
+                const ctx = item.canvas.getContext('2d');
+                ctx.save();
+                ctx.clearRect(0, 0, item.canvas.width, item.canvas.height);
+                ctx.drawImage(results.image, 0, 0, item.canvas.width, item.canvas.height);
+                if (!isResting && results.poseLandmarks) {
+                    drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
+                    drawLandmarks(ctx, results.poseLandmarks, {color: '#FF0000', lineWidth: 1, radius: 2});
+                }
+                ctx.restore();
+            });
+
+            if (isResting) return;
+
+            if (results.poseLandmarks) {
+                const landmarks = results.poseLandmarks;
+                const isLeft = currentLeg === 'LEFT';
+                const hip = isLeft ? landmarks[23] : landmarks[24];
+                const knee = isLeft ? landmarks[25] : landmarks[26];
+                const ankle = isLeft ? landmarks[27] : landmarks[28];
+
+                if(hip.visibility > 0.5 && knee.visibility > 0.5 && ankle.visibility > 0.5) {
+                    const angle = calculateAngle(hip, knee, ankle);
+
+                    if (angle >= 160) {
+                        clearError();
+                        const now = Date.now();
+                        if (!isHolding) {
+                            isHolding = true;
+                            holdStartTime = now;
+                            lastSpokenSecond = 1;
+                            feedbackText.innerText = 'ทำค้างไว้ค่ะ (เกร็งขาตรง)';
+                            timerText.innerText = 'เวลา: 1/5 วินาที';
+                            speak('1', true);
+                        } else {
+                            const elapsed = (now - holdStartTime) / 1000;
+                            const currentSec = Math.min(Math.floor(elapsed) + 1, 5);
+
+                            timerText.innerText = `เวลา: ${currentSec}/5 วินาที`;
+                            feedbackText.innerText = 'ทำค้างไว้ค่ะ เก่งมาก!';
+
+                            if (currentSec > lastSpokenSecond && currentSec <= 5) {
+                                lastSpokenSecond = currentSec;
+                                speak(String(currentSec), true);
+                            }
+
+                            if (elapsed >= 5) {
+                                handleRepCompleted();
+                            }
+                        }
+                    } else {
+                        if (isHolding) {
+                            isHolding = false;
+                            holdStartTime = null;
+                            lastSpokenSecond = 0;
+                            timerText.innerText = '';
+                        }
+                        const legName = currentLeg === 'LEFT' ? 'ซ้าย' : 'ขวา';
+                        feedbackText.innerText = `กรุณายกและเหยียดขา${legName}ให้ตรงออกไปข้างหน้า`;
+                        triggerError(`กรุณายกและเหยียดขา${legName}ให้ตรงค่ะ`);
+                    }
+                } else {
+                     feedbackText.innerText = 'มองไม่เห็นช่วงขา ขยับกล้องออกถอยหลัง';
+                }
+            }
+        });
+
+        const camera = new Camera(userCameraPip, {
+            onFrame: async () => {
+                const activeCam = isCameraMain ? userCameraPrimary : userCameraPip;
+                await pose.send({image: activeCam});
+            },
+            width: 480,
+            height: 640
+        });
+
+        startBtn.addEventListener('click', async () => {
+            speak('ระบบพร้อมแล้ว เริ่มจากขาซ้ายค่ะ ยกขาได้เลย', true);
+            try {
+                streamGlobal = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 640 }, audio: false });
+                userCameraPrimary.srcObject = streamGlobal;
+                userCameraPip.srcObject = streamGlobal;
+                
+                await userCameraPrimary.play();
+                await userCameraPip.play();
+
+                camera.start();
+                mainApp.style.opacity = 1;
+                startBtn.style.display = 'none';
+                mainVideo.play();
+                mainVideoPip.play();
+            } catch (err) {
+                alert('ไม่สามารถเปิดใช้งานกล้องได้: ' + err);
+            }
+        });
+    </script>
+</body>
+</html>
