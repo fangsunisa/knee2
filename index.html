@@ -55,7 +55,6 @@
             position: relative;
         }
 
-        /* จัดการขนาดวิดีโอและ Canvas ในจอหลักให้เต็มพอดีช่อง ไม่แยก 2 ฝั่ง */
         .primary-display video,
         .primary-display canvas {
             position: absolute;
@@ -199,14 +198,14 @@
             <!-- ส่วนจอใหญ่ (Primary) -->
             <div class="primary-display" id="primaryDisplay">
                 <button class="toggle-layout-btn" onclick="toggleLayout()">สลับมุมมอง</button>
-                <video id="mainVideo" src="Video Knee.mp4" loop muted playsinline autoplay></video>
+                <video id="mainVideo" loop muted playsinline autoplay></video>
                 <video id="userCameraPrimary" autoplay playsinline style="display: none;"></video>
                 <canvas id="outputCanvasPrimary" style="display: none;"></canvas>
             </div>
 
             <!-- ส่วนจอล่างขวา (PiP) -->
             <div class="pip-wrapper" onclick="toggleLayout()" title="คลิกเพื่อสลับหน้าจอ">
-                <video id="mainVideoPip" src="Video Knee.mp4" loop muted playsinline autoplay style="display: none;"></video>
+                <video id="mainVideoPip" loop muted playsinline autoplay style="display: none;"></video>
                 <video id="userCameraPip" autoplay playsinline></video>
                 <canvas id="outputCanvasPip" style="display: none;"></canvas>
             </div>
@@ -228,6 +227,35 @@
 
         </div>
     </div>
+
+    <!-- โค้ดเชื่อมต่อ Firebase เพื่อดึงวิดีโออัตโนมัติ -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        // ใส่ค่า Configuration ของ Firebase คุณตรงนี้
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+        const videoRef = ref(storage, 'Video Knee.mp4'); // ชื่อไฟล์วิดีโอใน Firebase Storage ของคุณ
+
+        getDownloadURL(videoRef)
+            .then((url) => {
+                document.getElementById('mainVideo').src = url;
+                document.getElementById('mainVideoPip').src = url;
+            })
+            .catch((error) => {
+                console.error("Error fetching video download URL:", error);
+            });
+    </script>
 
     <script>
         const alertBox = document.getElementById('alertBox');
@@ -337,9 +365,9 @@
             if (reps >= 10) {
                 reps = 0;
                 sets++;
-                setsText.innerText = `เซต: ${sets}/2`; // เปลี่ยนเป้าหมายเป็น 10 เซต
+                setsText.innerText = `เซต: ${sets}/2`; 
                 
-                if (sets >= 2) { // เปลี่ยนตรงนี้จาก 10 เป็น 2
+                if (sets >= 2) { 
                     speak('ยอดเยี่ยมมากค่ะ ครบทุกเซตแล้วค่ะ', true);
                     feedbackText.innerText = 'ออกกำลังกายครบตามเป้าหมายแล้ว!';
                     isResting = true; 
